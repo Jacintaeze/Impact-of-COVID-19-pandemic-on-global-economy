@@ -1,0 +1,326 @@
+--Create each table to import csv file
+CREATE TABLE inflation(Country_name varchar,Country_code varchar,Year2017 float,Year2018 float,
+					   Year2019 float,Year2020 float,Year2021 float );
+					   
+CREATE TABLE total_covid(country varchar,years integer,tot_case bigint,tot_death bigint);					   
+				
+CREATE TABLE covid (Date_reported Date,Country_code varchar,Country varchar,New_cases integer,
+					   Cumulative_cases integer,New_death integer,
+					    Cumulative_death integer,Years integer);
+					   
+					   
+CREATE TABLE Country_growth_rate(Country_name varchar,Country_code varchar,Year2017 float,Year2018 float,
+					   Year2019 float,Year2020 float,Year2021 float);
+					   
+
+CREATE TABLE GDP_per_capita(Country_name varchar,Country_code varchar,Year2017 float,Year2018 float,
+					   Year2019 float,Year2020 float,Year2021 float);
+					   
+--select all columns from a table
+SELECT * FROM GDP_per_capita;
+
+
+--Check for duplicate value	in the different tables			   
+SELECT  Country_name,COUNT (*) FROM inflation GROUP BY Country_name HAVING COUNT (*) >1
+
+SELECT Country,COUNT(*) FROM covid_19 GROUP BY Country HAVING COUNT (*) >1
+
+SELECT  Country_name,COUNT (*) FROM Country_growth_rate GROUP BY Country_name HAVING COUNT (*) >1
+
+SELECT  Country_name,COUNT (*) FROM  GDP_per_capita GROUP BY Country_name HAVING COUNT (*) >1
+
+
+--Check for null values in data
+SELECT * FROM inflation WHERE Year2017 IS NULL OR Year2018 IS NULL OR Year2019 IS NULL 
+OR Year2020 IS NULL OR Year2021 IS NULL;
+
+
+SELECT * FROM  covid_19 WHERE Date_reported IS NULL OR Country_code IS NULL OR Country IS NULL 
+OR New_cases IS NULL OR Cumulative_cases IS NULL OR New_death IS NULL OR  Cumulative_death IS NULL ;
+
+
+SELECT * FROM Country_growth_rate  WHERE Year2017 IS NULL OR Year2018 IS NULL OR Year2019 IS NULL 
+OR Year2020 IS NULL OR Year2021 IS NULL;
+
+
+SELECT * FROM GDP_per_capita WHERE Year2017 IS NULL OR Year2018 IS NULL OR Year2019 IS NULL 
+OR Year2020 IS NULL OR Year2021 IS NULL;
+
+
+--Remove all empty rows and save result into new table
+SELECT * INTO infltn FROM inflation WHERE NOT(Year2017 IS NULL OR Year2018 IS NULL 
+								 OR Year2019 IS NULL OR Year2020 IS NULL OR Year2021 IS NULL);
+								 
+
+SELECT * INTO gwth_rate FROM Country_growth_rate  WHERE NOT (Year2017 IS NULL OR Year2018 IS NULL
+								 OR Year2019 IS NULL OR Year2020 IS NULL OR Year2021 IS NULL);
+										 
+										 
+SELECT * INTO GDP_PPP FROM GDP_per_capita WHERE NOT (Year2017 IS NULL OR Year2018 IS NULL
+								  OR Year2019 IS NULL OR Year2020 IS NULL OR Year2021 IS NULL);
+										 
+															 
+--Extract year from Date
+SELECT *, EXTRACT(year from date_reported) AS "Years"  FROM covid_19
+--The query result was saved manually and imported into the database
+
+
+--Calculate the overall total cases and death for each country
+SELECT DISTINCT Country,date_reported,SUM(new_cases) OVER (PARTITION BY Country) AS total_Cases,
+                                       SUM(new_death) OVER (PARTITION BY Country) AS totaL_death
+FROM covid_19
+ORDER BY date_reported,country ;
+
+--Calculate the sum of cases and death per country for each year
+SELECT DISTINCT country,Years, SUM(new_cases) OVER (PARTITION BY Country,years) AS Tot_Case_year ,
+          SUM(new_death) OVER (PARTITION BY Country,years) AS Tot_death_year 
+FROM covid
+GROUP BY Country,years,new_cases,new_death
+ORDER BY country ;
+
+--Days with highest covid cases for each country
+select *
+from
+    (SELECT distinct country,date_reported,new_cases,
+     RANK() OVER (PARTITION BY country ORDER BY new_cases desc) 
+     AS rank_Case 
+     FROM covid
+     where new_cases >0
+     GROUP BY country,date_reported,new_cases
+     ORDER BY rank_case)x
+where x.rank_case = 1
+order by x.new_cases desc;
+
+--Top 10 country with highest covid case for year2022
+SELECT country, years,tot_case FROM total_covid WHERE years = 2022 ORDER BY tot_case DESC LIMIT 10;
+
+--Top 10 country with highest covid case for year2021
+SELECT country, years,tot_case FROM total_covid WHERE years = 2021 ORDER BY tot_case DESC LIMIT 10;
+
+--Top 10 country with highest covid case for year2020
+SELECT country, years,tot_case FROM total_covid WHERE years = 2020 ORDER BY tot_case DESC LIMIT 10;
+
+
+--Countries with lowest covid cases for each year
+SELECT country,years,tot_case FROM total_covid WHERE (years in(2020,2021,2022))
+AND (tot_case = 0 )
+ORDER BY tot_case ASC;
+
+
+--Compare the ppp of COVID-19 most affected countries
+SELECT * FROM gdp_ppp
+WHERE country_name in ('United States', 'India', 'Brazil', 'France', 'Germany','Korea, Rep.',
+'United Kingdom');
+
+
+--Top 10 countries with highest ppp for year 2017
+SELECT country_name,year2017 FROM gdp_ppp GROUP BY country_name,year2017
+ORDER BY year2017 desc
+LIMIT 10;
+
+--Top 10 countries with highest ppp for year 2018
+SELECT country_name,year2018 FROM gdp_ppp GROUP BY country_name,year2018
+ORDER BY year2018 desc
+LIMIT 10;
+
+--Top 10 countries with highest ppp for year 2019
+SELECT country_name,year2019 FROM gdp_ppp GROUP BY country_name,year2019
+ORDER BY year2019 desc
+LIMIT 10;
+
+--Top 10 countries with highest ppp for year 2020
+SELECT country_name,year2020 FROM gdp_ppp GROUP BY country_name,year2020
+ORDER BY year2020 desc
+LIMIT 10;
+
+--Top 10 countries with highest ppp for year 2021
+SELECT country_name,year2021 FROM gdp_ppp GROUP BY country_name,year2021
+ORDER BY year2021 desc
+LIMIT 10;
+
+--compare the consecutive gdp_ppp of countries with high gdp_ppp before covid pandemic
+SELECT country_name,MAX(year2017)YR2017,MAX(year2018)YR2018,MAX(year2019)YR2019,
+                    MAX(year2020)YR2020,MAX(year2021)YR2021
+FROM gdp_ppp GROUP BY country_name
+ORDER BY YR2019 desc
+LIMIT 10;
+
+
+--compare the consecutive gdp_ppp of countries with high gdp_ppp during covid pandemic
+SELECT country_name,MAX(year2017)YR2017,MAX(year2018)YR2018,MAX(year2019)YR2019,
+                    MAX(year2020)YR2020,MAX(year2021)YR2021
+FROM gdp_ppp GROUP BY country_name
+ORDER BY YR2020 desc 
+LIMIT 10;
+
+
+--10 countries with least ppp for year 2017
+SELECT country_name, MIN (year2017) AS min_gdp FROM gdp_ppp GROUP BY country_name
+ORDER BY min_gdp LIMIT 10 
+
+--10 countries with least ppp for year 2018
+SELECT country_name, MIN (year2018) AS min_gdp FROM gdp_ppp GROUP BY country_name 
+ORDER BY min_gdp LIMIT 10
+
+--10 countries with least ppp for year 2019
+SELECT country_name, MIN (year2019) AS min_gdp FROM gdp_ppp GROUP BY country_name 
+ORDER BY min_gdp LIMIT 10
+
+--10 countries with least ppp for year 2020
+SELECT country_name, MIN (year2020) AS min_gdp FROM gdp_ppp GROUP BY country_name 
+ORDER BY min_gdp LIMIT 10
+
+--10 countries with least ppp for year 2021
+SELECT country_name, MIN (year2021) AS min_gdp FROM gdp_ppp GROUP BY country_name 
+ORDER BY min_gdp LIMIT 10
+
+
+--compare the consecutive gdp_ppp of countries with low gdp_ppp before covid pandemic
+SELECT country_name,min(year2017) as YR2017, MIN (year2018) AS YR2018,
+min(year2019) as YR2019,min(year2020) as YR2020,min(year2021) as YR2021
+FROM gdp_ppp GROUP BY country_name 
+ORDER BY YR2019 LIMIT 10
+
+
+--compare the consecutive gdp_ppp of countries with low gdp_ppp during covid pandemic
+SELECT country_name,min(year2017) as YR2017, MIN (year2018) AS YR2018,
+min(year2019) as YR2019,min(year2020) as YR2020,min(year2021) as YR2021
+FROM gdp_ppp GROUP BY country_name 
+ORDER BY YR2020 LIMIT 10
+
+
+--Analyzing the subsequent rate of countries with high GDP rate in 2017
+SELECT country_name,MAX(year2017) as Max_gwth2017, MAX(year2018) AS gwth2018,
+MAX(year2019) as gwth2019,MAX(year2020) as gwth2020,MAX(year2021) as gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Max_gwth2017 DESC LIMIT 10
+
+--Analyzing the subsequent rate of countries with high GDP rate in 2018
+SELECT country_name,MAX(year2017) as gwth2017, MAX(year2018) AS Max_gwth2018,
+MAX(year2019) as gwth2019,MAX(year2020) as gwth2020,MAX(year2021) as gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Max_gwth2018 DESC LIMIT 10
+
+--Analyzing the subsequent rate of countries with high GDP rate in 2019
+SELECT country_name,MAX(year2017) as gwth2017, MAX(year2018) AS gwth2018,
+MAX(year2019) as Max_gwth2019,MAX(year2020) as gwth2020,MAX(year2021) as gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Max_gwth2019 DESC LIMIT 10
+
+--Analyzing the subsequent rate of countries with high GDP rate in 2020 
+SELECT country_name,MAX(year2017) as gwth2017, MAX(year2018) AS gwth2018,
+MAX(year2019) as gwth2019,MAX(year2020) as Max_gwth2020,MAX(year2021) as gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Max_gwth2020 DESC LIMIT 10
+
+--Analyzing the subsequent rate of countries with high GDP rate in 2021
+SELECT country_name,MAX(year2017) as gwth2017, MAX(year2018) AS gwth2018,
+MAX(year2019) as gwth2019,MAX(year2020) as gwth2020,MAX(year2021) as Max_gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Max_gwth2021 DESC LIMIT 10
+
+
+--Compare the GDP rate of COVID-19 most affected countries
+SELECT * FROM gwth_rate
+WHERE country_name in ('United States', 'India', 'Brazil', 'France', 'Germany','Korea, Rep.',
+'United Kingdom');
+
+--Analyzing the subsequent rate of countries with low GDP rate in 2017
+SELECT country_name,MIN(year2017) as Min_gwth2017, MIN(year2018) AS gwth2018,
+MIN(year2019) as gwth2019,MIN(year2020) as gwth2020,MIN(year2021) as gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Min_gwth2017 LIMIT 10
+
+--Analyzing the subsequent rate of countries with low GDP rate in 2018
+SELECT country_name,MIN(year2017) as gwth2017, MIN(year2018) AS Min_gwth2018,
+MIN(year2019) as gwth2019,MIN(year2020) as gwth2020,MIN(year2021) as gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Min_gwth2018 LIMIT 10
+
+--Analyzing the subsequent rate of countries with low GDP rate in 2019
+SELECT country_name,MIN(year2017) as gwth2017, MIN(year2018) AS gwth2018,
+MIN(year2019) as Min_gwth2019,MIN(year2020) as gwth2020,MIN(year2021) as gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Min_gwth2019 LIMIT 10
+
+--Analyzing the subsequent rate of countries with low GDP rate in 2020
+SELECT country_name,MIN(year2017) as gwth2017, MIN(year2018) AS gwth2018,
+MIN(year2019) as gwth2019,MIN(year2020) as Min_gwth2020,MIN(year2021) as gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Min_gwth2020 LIMIT 10
+
+--Analyzing the subsequent rate of countries with low GDP rate in 2021
+SELECT country_name,MIN(year2017) as gwth2017, MIN(year2018) AS gwth2018,
+MIN(year2019) as gwth2019,MIN(year2020) as gwth2020,MIN(year2021) as Min_gwth2021
+FROM gwth_rate GROUP BY country_name 
+ORDER BY Min_gwth2021 LIMIT 10
+
+--The rates of countries with high inflation in 2017
+SELECT country_name,MAX(year2017) as Max_inflation2017, MAX(year2018) AS inflation2018,
+MAX(year2019) as inflation2019,MAX(year2020) as inflation2020,MAX(year2021) as inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY Max_inflation2017 DESC LIMIT 10
+
+--The rates of countries with high inflation in 2018
+SELECT country_name,MAX(year2017) as inflation2017, MAX(year2018) AS max_inflation2018,
+MAX(year2019) as inflation2019,MAX(year2020) as inflation2020,MAX(year2021) as inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY Max_inflation2018 DESC LIMIT 10
+
+--The rates of countries with high inflation in 2019
+SELECT country_name,MAX(year2017) as inflation2017, MAX(year2018) AS inflation2018,
+MAX(year2019) as max_inflation2019,MAX(year2020) as inflation2020,MAX(year2021) as inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY Max_inflation2019 DESC LIMIT 10
+
+--The rates of countries with high inflation in 2020
+SELECT country_name,MAX(year2017) as inflation2017, MAX(year2018) AS inflation2018,
+MAX(year2019) as inflation2019,MAX(year2020) as max_inflation2020,MAX(year2021) as inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY Max_inflation2020 DESC LIMIT 10
+
+--The rates of countries with high inflation in 2021
+SELECT country_name,MAX(year2017) as inflation2017, MAX(year2018) AS inflation2018,
+MAX(year2019) as inflation2019,MAX(year2020) as inflation2020,MAX(year2021) as max_inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY Max_inflation2021 DESC LIMIT 10
+
+
+--The rates of countries with low inflation in 2017
+SELECT country_name,MIN(year2017) as min_inflation2017, MIN(year2018) AS inflation2018,
+MIN(year2019) as inflation2019,MIN(year2020) as inflation2020,MIN(year2021) as inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY min_inflation2017 LIMIT 10
+
+--The rates of countries with low inflation in 2018
+SELECT country_name,MIN(year2017) as inflation2017, MIN(year2018) AS min_inflation2018,
+MIN(year2019) as inflation2019,MIN(year2020) as inflation2020,MIN(year2021) as inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY min_inflation2018 LIMIT 10
+
+--The rates of countries with low inflation in 2019
+SELECT country_name,MIN(year2017) as inflation2017, MIN(year2018) AS inflation2018,
+MIN(year2019) as min_inflation2019,MIN(year2020) as inflation2020,MIN(year2021) as inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY min_inflation2019 LIMIT 10
+
+--The rates of countries with low inflation in 2020
+SELECT country_name,MIN(year2017) as inflation2017, MIN(year2018) AS inflation2018,
+MIN(year2019) as inflation2019,MIN(year2020) as min_inflation2020,MIN(year2021) as inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY min_inflation2020 LIMIT 10
+
+--The rates of countries with low inflation in 2021
+SELECT country_name,MIN(year2017) as inflation2017, MIN(year2018) AS inflation2018,
+MIN(year2019) as inflation2019,MIN(year2020) as inflation2020,MIN(year2021) as min_inflation2021
+FROM infltn GROUP BY country_name 
+ORDER BY min_inflation2021 LIMIT 10
+
+--percentage of countries inflation 2021
+SELECT *,(cume_percent ||'%')percentage
+FROM
+     (SELECT country_name,year2021,
+       ROUND(CUME_DIST() OVER (ORDER BY year2021 desc)::NUMERIC * 100,2) AS cume_percent
+       FROM infltn)X
+
+
