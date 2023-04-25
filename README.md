@@ -1,3 +1,4 @@
+![ANALYSIS OF THE IMPACT OF COVID-19 ON GLOBAL ECONOMY pdf_3](https://user-images.githubusercontent.com/104267539/234280895-1ffd1a24-a603-4597-a5ae-403d1af4c2b5.jpg)
 # Impact-of-COVID-19-pandemic-on-global-economy
 ## Introduction
 Coronavirus disease (COVID-19) is a communicable respiratory disease caused by the SARS-CoV-2 virus. It was first reported to the World Health Organization (WHO) on December 31, 2019, and by January 30, 2020, the COVID-19 outbreak had been declared a global health emergency.
